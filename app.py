@@ -82,4 +82,22 @@ def main_app():
     week_expense = current_week.loc[current_week["type"] == "Expense", "amount"].sum()
     week_saving = current_week.loc[current_week["type"] == "Saving", "amount"].sum()
 
-    st.markdown(f"### Current
+    st.markdown(f"### Current Week Totals ({week_start.date()} to {week_end.date()}):")
+    st.write(f"- **Expenses:** ${week_expense:.2f}")
+    st.write(f"- **Savings:** ${week_saving:.2f}")
+
+    # --- Summary Table ---
+    st.markdown(f"### Summary from {start_date} to {end_date}")
+    summary = filtered.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
+    st.dataframe(summary.style.format("${:,.2f}"))
+
+    # --- Detailed transactions ---
+    st.markdown("### Transaction Details")
+    st.dataframe(filtered.sort_values("date", ascending=False).reset_index(drop=True))
+
+# --- APP RUN ---
+if not st.session_state.authenticated:
+    login()
+    st.stop()
+else:
+    main_app()
