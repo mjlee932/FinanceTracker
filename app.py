@@ -10,19 +10,22 @@ if "authenticated" not in st.session_state:
 def login_page():
     st.title("Login")
     pwd = st.text_input("Enter password:", type="password")
-    if st.button("Login"):
+    login_clicked = st.button("Login")
+    return pwd, login_clicked
+
+# --- LOGIN FLOW ---
+
+if not st.session_state.authenticated:
+    pwd, login_clicked = login_page()
+    if login_clicked:
         if pwd == PASSWORD:
             st.session_state.authenticated = True
-            st.experimental_rerun()
+            st.experimental_rerun()  # Rerun once after successful login
         else:
             st.error("Incorrect password")
+    st.stop()  # Stop here until authenticated
 
-# Show login screen if not authenticated
-if not st.session_state.authenticated:
-    login_page()
-    st.stop()
-
-# --- Below is your main app code ---
+# --- MAIN APP BELOW ---
 
 # Load or initialize data
 DATA_FILE = "transactions.csv"
