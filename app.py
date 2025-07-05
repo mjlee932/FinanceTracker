@@ -2,7 +2,26 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Load or initialize data
+# --- CONFIGURE PASSWORD ---
+PASSWORD = "mypassword123"  # Change this to your secret password
+
+# --- LOGIN SCREEN ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔐 Login Required")
+    password_input = st.text_input("Enter password", type="password")
+    if st.button("Login"):
+        if password_input == PASSWORD:
+            st.session_state.authenticated = True
+            st.success("Login successful!")
+            st.experimental_rerun()
+        else:
+            st.error("Incorrect password")
+    st.stop()
+
+# --- MAIN APP CONTENT ---
 @st.cache_data
 def load_data():
     try:
@@ -28,17 +47,13 @@ if submitted:
     df.to_csv('finance_data.csv', index=False)
     st.success("Entry added!")
 
-# Make sure 'date' column is in datetime format
+# Convert 'date' column to datetime
 if not df.empty:
     df['date'] = pd.to_datetime(df['date'])
 
-# Display summary options
+# Display summary
 freq = st.selectbox("View Summary By:", ["Daily", "Monthly", "Yearly"])
 freq_map = {"Daily": "D", "Monthly": "M", "Yearly": "Y"}
 
 if not df.empty:
-    summary = df.groupby([pd.Grouper(key='date', freq=freq_map[freq]), 'category'])['amount'].sum().unstack().fillna(0)
-    st.write(f"### {freq} Summary")
-    st.dataframe(summary)
-else:
-    st.info("No data yet. Add some entries!")
+    summary = df.groupby([pd.Gr]()
