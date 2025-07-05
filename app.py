@@ -98,4 +98,16 @@ st.markdown(f"### Current Week's Total Expenses: ${week_expenses:.2f}")
 st.markdown(f"### Total Savings: ${total_savings:.2f}")
 
 if df_filtered.empty:
-    st.info("No data for selected date
+    st.info("No data for selected date range.")
+else:
+    # Group by date freq and type and sum amounts
+    grouped = df_filtered.groupby(
+        [pd.Grouper(key="date", freq=freq_map[freq]), "type"]
+    )["amount"].sum().unstack(fill_value=0)
+
+    st.subheader(f"{freq} Summary from {start_date} to {end_date}")
+    st.dataframe(grouped.style.format("${:,.2f}"))
+
+    st.subheader("All Transactions")
+    # Sort by date descending
+    st.dataframe(df_filtered.sort_values(by="date", ascending=False).reset_index(drop=True))
