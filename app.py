@@ -2,32 +2,28 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
-# --- PASSWORD SETUP ---
 PASSWORD = "mypassword123"
 
-# Initialize session state for authentication and data storage
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame(columns=["date", "category", "type", "amount", "description"])
 
-# --- LOGIN FUNCTION ---
 def login():
     st.title("🔐 Login Required")
     pwd = st.text_input("Enter password", type="password")
     if st.button("Login"):
         if pwd == PASSWORD:
             st.session_state.authenticated = True
+            # After setting authenticated, rerun the app
             st.experimental_rerun()
         else:
             st.error("Incorrect password")
 
-# --- MAIN APP FUNCTION ---
 def main_app():
     st.title("💰 Expense & Savings Tracker")
 
-    # --- Input Form ---
     with st.form("entry_form", clear_on_submit=True):
         date = st.date_input("Date", datetime.today())
         category = st.text_input("Category (e.g. Food, Rent, Salary)")
@@ -55,8 +51,7 @@ def main_app():
         st.info("No entries yet. Add your first expense or saving!")
         return
 
-    # --- Filter by date range ---
-    st.subheader("Filter & Summary")
+    # Filter & summarize logic here...
     min_date = df["date"].min().date()
     max_date = df["date"].max().date()
 
@@ -73,9 +68,8 @@ def main_app():
         st.info("No data for the selected date range.")
         return
 
-    # --- Weekly total (current week) ---
     today = datetime.today()
-    week_start = today - timedelta(days=today.weekday())  # Monday
+    week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
     mask_week = (df["date"].dt.date >= week_start.date()) & (df["date"].dt.date <= week_end.date())
     current_week = df.loc[mask_week]
@@ -86,16 +80,14 @@ def main_app():
     st.write(f"- **Expenses:** ${week_expense:.2f}")
     st.write(f"- **Savings:** ${week_saving:.2f}")
 
-    # --- Summary Table ---
     st.markdown(f"### Summary from {start_date} to {end_date}")
     summary = filtered.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
     st.dataframe(summary.style.format("${:,.2f}"))
 
-    # --- Detailed transactions ---
     st.markdown("### Transaction Details")
     st.dataframe(filtered.sort_values("date", ascending=False).reset_index(drop=True))
 
-# --- APP RUN ---
+
 if not st.session_state.authenticated:
     login()
     st.stop()
