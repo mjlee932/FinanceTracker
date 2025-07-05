@@ -17,7 +17,6 @@ def login():
     if st.button("Login"):
         if pwd == PASSWORD:
             st.session_state.authenticated = True
-            # Instead of st.experimental_rerun(), just set a flag
             st.success("Login successful! Please interact again to proceed.")
         else:
             st.error("Incorrect password")
@@ -79,4 +78,18 @@ def main_app():
     week_expense = current_week.loc[current_week["type"] == "Expense", "amount"].sum()
     week_saving = current_week.loc[current_week["type"] == "Saving", "amount"].sum()
 
-    st.markdown(f"### Current We
+    st.markdown(f"### Current Week Totals ({week_start.date()} to {week_end.date()}):")
+    st.write(f"- **Expenses:** ${week_expense:.2f}")
+    st.write(f"- **Savings:** ${week_saving:.2f}")
+
+    st.markdown(f"### Summary from {start_date} to {end_date}")
+    summary = filtered.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
+    st.dataframe(summary.style.format("${:,.2f}"))
+
+    st.markdown("### Transaction Details")
+    st.dataframe(filtered.sort_values("date", ascending=False).reset_index(drop=True))
+
+if not st.session_state.authenticated:
+    login()
+else:
+    main_app()
