@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 PASSWORD = "mypassword123"
 
+# Initialize session state
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -16,8 +17,8 @@ def login():
     if st.button("Login"):
         if pwd == PASSWORD:
             st.session_state.authenticated = True
-            # After setting authenticated, rerun the app
-            st.experimental_rerun()
+            # Instead of st.experimental_rerun(), just set a flag
+            st.success("Login successful! Please interact again to proceed.")
         else:
             st.error("Incorrect password")
 
@@ -51,12 +52,13 @@ def main_app():
         st.info("No entries yet. Add your first expense or saving!")
         return
 
-    # Filter & summarize logic here...
+    # Date filtering
     min_date = df["date"].min().date()
     max_date = df["date"].max().date()
 
     start_date = st.date_input("Start date", min_value=min_date, max_value=max_date, value=min_date)
     end_date = st.date_input("End date", min_value=min_date, max_value=max_date, value=max_date)
+
     if start_date > end_date:
         st.error("Start date must be before or equal to End date.")
         return
@@ -68,6 +70,7 @@ def main_app():
         st.info("No data for the selected date range.")
         return
 
+    # Current week totals
     today = datetime.today()
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
@@ -76,20 +79,4 @@ def main_app():
     week_expense = current_week.loc[current_week["type"] == "Expense", "amount"].sum()
     week_saving = current_week.loc[current_week["type"] == "Saving", "amount"].sum()
 
-    st.markdown(f"### Current Week Totals ({week_start.date()} to {week_end.date()}):")
-    st.write(f"- **Expenses:** ${week_expense:.2f}")
-    st.write(f"- **Savings:** ${week_saving:.2f}")
-
-    st.markdown(f"### Summary from {start_date} to {end_date}")
-    summary = filtered.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
-    st.dataframe(summary.style.format("${:,.2f}"))
-
-    st.markdown("### Transaction Details")
-    st.dataframe(filtered.sort_values("date", ascending=False).reset_index(drop=True))
-
-
-if not st.session_state.authenticated:
-    login()
-    st.stop()
-else:
-    main_app()
+    st.markdown(f"### Current We
