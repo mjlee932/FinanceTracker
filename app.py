@@ -2,13 +2,12 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
-# --- Password Protection ---
 PASSWORD = "mypassword123"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-def login():
+def login_page():
     st.title("Login")
     pwd = st.text_input("Enter password:", type="password")
     if st.button("Login"):
@@ -18,11 +17,14 @@ def login():
         else:
             st.error("Incorrect password")
 
+# Show login screen if not authenticated
 if not st.session_state.authenticated:
-    login()
+    login_page()
     st.stop()
 
-# --- Load or Initialize Data ---
+# --- Below is your main app code ---
+
+# Load or initialize data
 DATA_FILE = "transactions.csv"
 
 @st.cache_data(show_spinner=False)
@@ -38,7 +40,7 @@ def save_data(df):
 
 df = load_data()
 
-# --- Add New Entry ---
+# Add new entry
 st.header("Add New Transaction")
 
 with st.form("entry_form"):
@@ -50,7 +52,6 @@ with st.form("entry_form"):
         type_ = st.selectbox("Type", ["Expense", "Saving"])
         amount = st.number_input("Amount", min_value=0.0, format="%.2f")
         notes = st.text_input("Notes (optional)")
-
     submitted = st.form_submit_button("Add Entry")
 
     if submitted:
@@ -71,7 +72,7 @@ with st.form("entry_form"):
             st.success("Entry added successfully!")
             st.experimental_rerun()
 
-# --- Show Current Week Summary ---
+# Current week summary
 st.header("Current Week Summary")
 
 today = datetime.today()
@@ -87,7 +88,7 @@ total_savings_week = df_week.loc[df_week["type"] == "Saving", "amount"].sum()
 st.markdown(f"**Total Expenses this week (Mon-Sun):** AED {total_expenses_week:.2f}")
 st.markdown(f"**Total Savings this week (Mon-Sun):** AED {total_savings_week:.2f}")
 
-# --- Summary Options ---
+# Summary options
 st.header("View Summary")
 
 freq_map = {
@@ -122,7 +123,6 @@ else:
     if df.empty:
         st.info("No transactions to summarize.")
     else:
-        # Group by frequency and type, category
         df = df.copy()
         df["date"] = pd.to_datetime(df["date"])
         grouped = df.groupby([pd.Grouper(key="date", freq=freq_map[summary_type]), "type", "category"])["amount"].sum()
@@ -131,8 +131,7 @@ else:
         st.subheader(f"{summary_type} Summary")
         st.dataframe(summary_df)
 
-# --- Show All Transactions ---
-
+# Show all transactions
 st.header("All Transactions")
 
 if df.empty:
