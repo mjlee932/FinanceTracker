@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 PASSWORD = "mypassword123"
 
+# --- Authentication ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -13,12 +14,14 @@ if not st.session_state.authenticated:
     if st.button("Login"):
         if password_input == PASSWORD:
             st.session_state.authenticated = True
-            st.success("Login successful!")
             st.experimental_rerun()
         else:
             st.error("Incorrect password")
     st.stop()
+else:
+    st.success("Login successful!")
 
+# --- Data loading ---
 @st.cache_data
 def load_data():
     try:
@@ -29,12 +32,13 @@ def load_data():
 
 df = load_data()
 
-# Convert 'date' to datetime, coerce errors to NaT, then drop invalid dates
+# --- Clean and parse dates ---
 df['date'] = pd.to_datetime(df['date'], errors='coerce')
 df = df.dropna(subset=['date'])
 
 st.title("💰 My Expense & Savings Tracker")
 
+# --- Calculate totals ---
 total_savings = df[df['category'] == 'saving']['amount'].sum()
 total_expenses = df[df['category'] == 'expense']['amount'].sum()
 
@@ -43,12 +47,13 @@ start_of_week = today - timedelta(days=today.weekday())
 this_week_df = df[df['date'].dt.date >= start_of_week]
 weekly_expenses = this_week_df[this_week_df['category'] == 'expense']['amount'].sum()
 
-st.markdown("### 📊 Summary")
+# --- Display summary metrics ---
 col1, col2, col3 = st.columns(3)
 col1.metric("This Week's Expenses", f"AED {weekly_expenses:,.2f}")
 col2.metric("Total Expenses", f"AED {total_expenses:,.2f}")
 col3.metric("Total Savings", f"AED {total_savings:,.2f}")
 
+# --- Entry form ---
 st.markdown("### ➕ Add New Entry")
 with st.form("entry_form"):
     date = st.date_input("Date", datetime.today())
@@ -69,9 +74,15 @@ if submitted:
     st.success("Entry added!")
     st.experimental_rerun()
 
+# --- Summary by frequency ---
 st.markdown("### 📅 Time-Based Summary")
-freq = st.selectbox("View Summary By:", ["Daily", "Monthly", "Yearly"])
-freq_map = {"Daily": "D", "Monthly": "M", "Yearly": "Y"}
+freq = st.selectbox("View Summary By:", ["Daily", "Weekly", "Monthly", "Yearly"])
+freq_map = {
+    "Daily": "D",
+    "Weekly": "W",
+    "Monthly": "M",
+    "Yearly": "Y"
+}
 
 if not df.empty:
     summary = df.groupby(
