@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # Password for login
-PASSWORD = "yourpassword"
+PASSWORD = "mj1234#"
 
 # Initialize authentication state
 if "authenticated" not in st.session_state:
