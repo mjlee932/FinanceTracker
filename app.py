@@ -22,7 +22,7 @@ if not st.session_state.authenticated:
             st.error("Incorrect password")
     st.stop()
 
-# --- DATA HANDLING ---
+# --- DATA FUNCTIONS ---
 def load_data():
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
@@ -35,7 +35,7 @@ def load_data():
 def save_data(df):
     df.to_csv(DATA_FILE, index=False)
 
-# --- Load into session_state if not already ---
+# --- SESSION DATA ---
 if "df" not in st.session_state:
     st.session_state.df = load_data()
 
@@ -59,7 +59,7 @@ col1.metric("📅 Weekly Expenses", f"AED {weekly_expenses:,.2f}")
 col2.metric("💸 Total Expenses", f"AED {total_expenses:,.2f}")
 col3.metric("💰 Total Savings", f"AED {total_savings:,.2f}")
 
-# --- ADD ENTRY ---
+# --- ADD ENTRY FORM ---
 st.markdown("### ➕ Add New Entry")
 with st.form("add_entry"):
     date = st.date_input("Date", datetime.today())
@@ -78,15 +78,25 @@ if submitted:
     st.success("Entry added!")
     st.rerun()
 
-# --- SUMMARY ---
-st.markdown("### 📊 Summary View")
-freq = st.selectbox("Group By:", ["Daily", "Weekly", "Monthly", "Yearly"])
-freq_map = {"Daily": "D", "Weekly": "W", "Monthly": "M", "Yearly": "Y"}
+# --- CUSTOM DATE RANGE SUMMARY ---
+st.markdown("### 📊 Summary View by Date Range")
 
 if not df.empty:
-    grouped = df.groupby([pd.Grouper(key="date", freq=freq_map[freq]), "category"])["amount"].sum()
-    summary = grouped.unstack(fill_value=0)
-    summary.index = summary.index.date
-    st.dataframe(summary)
-else:
-    st.info("No data yet. Add some entries above.")
+    min_date = df["date"].min().date()
+    max_date = df["date"].max().date()
+
+    col1, col2 = st.columns(2)
+    start_date = col1.date_input("Start Date", min_value=min_date, max_value=max_date, value=min_date)
+    end_date = col2.date_input("End Date", min_value=min_date, max_value=max_date, value=max_date)
+
+    if start_date > end_date:
+        st.warning("⚠️ Start date must be before end date.")
+    else:
+        filtered_df = df[(df["date"].dt.date >= start_date) & (df["date"].dt.date <= end_date)]
+
+        freq = st.selectbox("Group by", ["Daily", "Weekly", "Monthly", "Yearly"])
+        freq_map = {"Daily": "D", "Weekly": "W", "Monthly": "M", "Yearly": "Y"}
+
+        if not filtered_df.empty:
+            grouped = filtered_df.groupby([pd.Grouper(key="date", freq=freq_map[freq]), "category"])["amount"].sum()
+            summary_df = grouped.unstack(fill_value=0
