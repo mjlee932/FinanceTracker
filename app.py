@@ -24,20 +24,17 @@ with st.form("entry_form"):
 
 if submitted:
     new_entry = {'date': date, 'category': category, 'amount': amount}
-   df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+    df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
     df.to_csv('finance_data.csv', index=False)
     st.success("Entry added!")
 
 # Display summary options
 freq = st.selectbox("View Summary By:", ["Daily", "Monthly", "Yearly"])
-
 freq_map = {"Daily": "D", "Monthly": "M", "Yearly": "Y"}
 
 if not df.empty:
     summary = df.groupby([pd.Grouper(key='date', freq=freq_map[freq]), 'category'])['amount'].sum().unstack().fillna(0)
     st.write(f"### {freq} Summary")
     st.dataframe(summary)
-
 else:
     st.info("No data yet. Add some entries!")
-
