@@ -56,4 +56,8 @@ freq = st.selectbox("View Summary By:", ["Daily", "Monthly", "Yearly"])
 freq_map = {"Daily": "D", "Monthly": "M", "Yearly": "Y"}
 
 if not df.empty:
-    summary = df.groupby([pd.Gr]()
+    summary = df.groupby([pd.Grouper(key='date', freq=freq_map[freq]), 'category'])['amount'].sum().unstack().fillna(0)
+    st.write(f"### {freq} Summary")
+    st.dataframe(summary)
+else:
+    st.info("No data yet. Add some entries!")
