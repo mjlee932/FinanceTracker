@@ -14,9 +14,10 @@ def login():
     if st.button("Login"):
         if pwd == PASSWORD:
             st.session_state.authenticated = True
-            st.experimental_rerun()
+            st.experimental_rerun()  # rerun only after successful login
         else:
             st.error("Incorrect password")
+            # DO NOT call st.experimental_rerun() here or it loops infinitely
 
 if not st.session_state.authenticated:
     login()
