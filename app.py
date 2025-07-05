@@ -2,94 +2,143 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
+# --- Password Protection ---
 PASSWORD = "mypassword123"
 
-# Initialize session state
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-if "data" not in st.session_state:
-    st.session_state.data = pd.DataFrame(columns=["date", "category", "type", "amount", "description"])
-
 def login():
-    st.title("🔐 Login Required")
-    pwd = st.text_input("Enter password", type="password")
+    st.title("Login")
+    pwd = st.text_input("Enter password:", type="password")
     if st.button("Login"):
         if pwd == PASSWORD:
             st.session_state.authenticated = True
-            st.success("Login successful! Please interact again to proceed.")
+            st.experimental_rerun()
         else:
             st.error("Incorrect password")
 
-def main_app():
-    st.title("💰 Expense & Savings Tracker")
-
-    with st.form("entry_form", clear_on_submit=True):
-        date = st.date_input("Date", datetime.today())
-        category = st.text_input("Category (e.g. Food, Rent, Salary)")
-        entry_type = st.selectbox("Type", ["Expense", "Saving"])
-        amount = st.number_input("Amount", min_value=0.0, format="%.2f")
-        description = st.text_input("Description (optional)")
-        submitted = st.form_submit_button("Add Entry")
-
-        if submitted:
-            if not category or amount <= 0:
-                st.error("Please enter a valid category and amount > 0.")
-            else:
-                new_row = {
-                    "date": pd.to_datetime(date),
-                    "category": category.strip(),
-                    "type": entry_type,
-                    "amount": amount,
-                    "description": description.strip()
-                }
-                st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame([new_row])], ignore_index=True)
-                st.success("Entry added!")
-
-    df = st.session_state.data.copy()
-    if df.empty:
-        st.info("No entries yet. Add your first expense or saving!")
-        return
-
-    # Date filtering
-    min_date = df["date"].min().date()
-    max_date = df["date"].max().date()
-
-    start_date = st.date_input("Start date", min_value=min_date, max_value=max_date, value=min_date)
-    end_date = st.date_input("End date", min_value=min_date, max_value=max_date, value=max_date)
-
-    if start_date > end_date:
-        st.error("Start date must be before or equal to End date.")
-        return
-
-    mask = (df["date"].dt.date >= start_date) & (df["date"].dt.date <= end_date)
-    filtered = df.loc[mask]
-
-    if filtered.empty:
-        st.info("No data for the selected date range.")
-        return
-
-    # Current week totals
-    today = datetime.today()
-    week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=6)
-    mask_week = (df["date"].dt.date >= week_start.date()) & (df["date"].dt.date <= week_end.date())
-    current_week = df.loc[mask_week]
-    week_expense = current_week.loc[current_week["type"] == "Expense", "amount"].sum()
-    week_saving = current_week.loc[current_week["type"] == "Saving", "amount"].sum()
-
-    st.markdown(f"### Current Week Totals ({week_start.date()} to {week_end.date()}):")
-    st.write(f"- **Expenses:** ${week_expense:.2f}")
-    st.write(f"- **Savings:** ${week_saving:.2f}")
-
-    st.markdown(f"### Summary from {start_date} to {end_date}")
-    summary = filtered.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
-    st.dataframe(summary.style.format("${:,.2f}"))
-
-    st.markdown("### Transaction Details")
-    st.dataframe(filtered.sort_values("date", ascending=False).reset_index(drop=True))
-
 if not st.session_state.authenticated:
     login()
+    st.stop()
+
+# --- Load or Initialize Data ---
+DATA_FILE = "transactions.csv"
+
+@st.cache_data(show_spinner=False)
+def load_data():
+    try:
+        df = pd.read_csv(DATA_FILE, parse_dates=["date"])
+    except FileNotFoundError:
+        df = pd.DataFrame(columns=["date", "category", "type", "amount", "notes"])
+    return df
+
+def save_data(df):
+    df.to_csv(DATA_FILE, index=False)
+
+df = load_data()
+
+# --- Add New Entry ---
+st.header("Add New Transaction")
+
+with st.form("entry_form"):
+    col1, col2 = st.columns(2)
+    with col1:
+        date = st.date_input("Date", value=datetime.today())
+        category = st.text_input("Category (e.g., Food, Rent, Salary)")
+    with col2:
+        type_ = st.selectbox("Type", ["Expense", "Saving"])
+        amount = st.number_input("Amount", min_value=0.0, format="%.2f")
+        notes = st.text_input("Notes (optional)")
+
+    submitted = st.form_submit_button("Add Entry")
+
+    if submitted:
+        if not category.strip():
+            st.error("Please enter a category.")
+        elif amount <= 0:
+            st.error("Amount must be greater than zero.")
+        else:
+            new_entry = {
+                "date": pd.to_datetime(date),
+                "category": category.strip(),
+                "type": type_,
+                "amount": amount,
+                "notes": notes.strip(),
+            }
+            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+            save_data(df)
+            st.success("Entry added successfully!")
+            st.experimental_rerun()
+
+# --- Show Current Week Summary ---
+st.header("Current Week Summary")
+
+today = datetime.today()
+start_of_week = today - timedelta(days=today.weekday())  # Monday
+end_of_week = start_of_week + timedelta(days=6)
+
+mask_week = (df["date"] >= pd.Timestamp(start_of_week.date())) & (df["date"] <= pd.Timestamp(end_of_week.date()))
+df_week = df.loc[mask_week]
+
+total_expenses_week = df_week.loc[df_week["type"] == "Expense", "amount"].sum()
+total_savings_week = df_week.loc[df_week["type"] == "Saving", "amount"].sum()
+
+st.markdown(f"**Total Expenses this week (Mon-Sun):** AED {total_expenses_week:.2f}")
+st.markdown(f"**Total Savings this week (Mon-Sun):** AED {total_savings_week:.2f}")
+
+# --- Summary Options ---
+st.header("View Summary")
+
+freq_map = {
+    "Daily": "D",
+    "Weekly": "W-MON",
+    "Monthly": "M",
+    "Yearly": "Y"
+}
+
+summary_type = st.selectbox("Summary Frequency", ["Daily", "Weekly", "Monthly", "Yearly", "Custom Date Range"])
+
+if summary_type == "Custom Date Range":
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Start Date", value=df["date"].min() if not df.empty else datetime.today())
+    with col2:
+        end_date = st.date_input("End Date", value=datetime.today())
+    if start_date > end_date:
+        st.error("Start Date must be before or equal to End Date")
+        st.stop()
+
+    mask_custom = (df["date"] >= pd.Timestamp(start_date)) & (df["date"] <= pd.Timestamp(end_date))
+    df_filtered = df.loc[mask_custom]
+
+    if df_filtered.empty:
+        st.info("No transactions found in this date range.")
+    else:
+        summary_df = df_filtered.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
+        st.subheader(f"Summary from {start_date} to {end_date}")
+        st.dataframe(summary_df)
 else:
-    main_app()
+    if df.empty:
+        st.info("No transactions to summarize.")
+    else:
+        # Group by frequency and type, category
+        df = df.copy()
+        df["date"] = pd.to_datetime(df["date"])
+        grouped = df.groupby([pd.Grouper(key="date", freq=freq_map[summary_type]), "type", "category"])["amount"].sum()
+        summary_df = grouped.unstack(level=[1, 2], fill_value=0)
+
+        st.subheader(f"{summary_type} Summary")
+        st.dataframe(summary_df)
+
+# --- Show All Transactions ---
+
+st.header("All Transactions")
+
+if df.empty:
+    st.info("No transactions recorded yet.")
+else:
+    df_sorted = df.sort_values(by="date", ascending=False)
+    df_display = df_sorted.copy()
+    df_display["date"] = df_display["date"].dt.strftime("%Y-%m-%d")
+    st.dataframe(df_display.reset_index(drop=True))
