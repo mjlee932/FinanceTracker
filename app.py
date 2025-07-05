@@ -6,7 +6,7 @@ from datetime import datetime
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_csv('finance_data.csv', parse_dates=['date'])
+        df = pd.read_csv('finance_data.csv')
     except FileNotFoundError:
         df = pd.DataFrame(columns=['date', 'category', 'amount'])
     return df
@@ -23,10 +23,14 @@ with st.form("entry_form"):
     submitted = st.form_submit_button("Add Entry")
 
 if submitted:
-    new_entry = {'date': date, 'category': category, 'amount': amount}
+    new_entry = {'date': date.strftime("%Y-%m-%d"), 'category': category, 'amount': amount}
     df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
     df.to_csv('finance_data.csv', index=False)
     st.success("Entry added!")
+
+# Make sure 'date' column is in datetime format
+if not df.empty:
+    df['date'] = pd.to_datetime(df['date'])
 
 # Display summary options
 freq = st.selectbox("View Summary By:", ["Daily", "Monthly", "Yearly"])
