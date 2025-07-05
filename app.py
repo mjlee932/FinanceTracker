@@ -1,30 +1,26 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
 
-# --- PASSWORD PROTECTION ---
 PASSWORD = "mypassword123"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
-if "login_attempted" not in st.session_state:
-    st.session_state.login_attempted = False
 
 def login():
     st.title("🔐 Login Required")
     pwd = st.text_input("Enter password", type="password")
-    if st.button("Login"):
-        st.session_state.login_attempted = True
+    login_clicked = st.button("Login")
+    if login_clicked:
         if pwd == PASSWORD:
             st.session_state.authenticated = True
+            st.experimental_rerun()  # safe here, right after login click
         else:
             st.error("Incorrect password")
 
 if not st.session_state.authenticated:
     login()
-    if st.session_state.login_attempted and st.session_state.authenticated:
-        st.experimental_rerun()
     st.stop()
+
+# The rest of your app below...
 
 # --- MAIN APP ---
 
