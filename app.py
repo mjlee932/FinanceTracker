@@ -99,4 +99,10 @@ if not df.empty:
 
         if not filtered_df.empty:
             grouped = filtered_df.groupby([pd.Grouper(key="date", freq=freq_map[freq]), "category"])["amount"].sum()
-            summary_df = grouped.unstack(fill_value=0
+            summary_df = grouped.unstack(fill_value=0)
+            summary_df.index = summary_df.index.date
+            st.dataframe(summary_df)
+        else:
+            st.info("No data found for this date range.")
+else:
+    st.info("No entries yet. Add your first entry above.")
