@@ -24,7 +24,7 @@ with st.form("entry_form"):
 
 if submitted:
     new_entry = {'date': date, 'category': category, 'amount': amount}
-    df = df.append(new_entry, ignore_index=True)
+   df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
     df.to_csv('finance_data.csv', index=False)
     st.success("Entry added!")
 
