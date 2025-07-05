@@ -18,7 +18,7 @@ if not st.session_state.authenticated:
     if login_button:
         if password_input == PASSWORD:
             st.session_state.authenticated = True
-            st.experimental_rerun()
+            st.rerun()  # ✅ NEW: Replaces experimental_rerun()
         else:
             st.error("Incorrect password")
     st.stop()
@@ -66,30 +66,4 @@ with st.form("entry_form"):
 
 if submitted:
     new_entry = pd.DataFrame([{
-        "date": date.strftime("%Y-%m-%d"),
-        "category": category,
-        "amount": amount
-    }])
-    df = pd.concat([df, new_entry], ignore_index=True)
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df.to_csv(DATA_FILE, index=False)
-    st.success("Entry added successfully!")
-    st.experimental_rerun()
-
-# --- SUMMARY VIEW ---
-st.markdown("### 📊 Summary Report")
-freq = st.selectbox("Group by:", ["Daily", "Weekly", "Monthly", "Yearly"])
-freq_map = {
-    "Daily": "D",
-    "Weekly": "W",
-    "Monthly": "M",
-    "Yearly": "Y"
-}
-
-if not df.empty:
-    grouped = df.groupby([pd.Grouper(key="date", freq=freq_map[freq]), "category"])["amount"].sum()
-    summary_df = grouped.unstack(fill_value=0)
-    summary_df.index = summary_df.index.date  # Show dates without time
-    st.dataframe(summary_df)
-else:
-    st.info("No entries yet. Use the form above to add your first one!")
+        "date": date
