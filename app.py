@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- CONFIGURE PASSWORD ---
 PASSWORD = "mypassword123"  # 🔐 Change this to your own password
@@ -16,7 +16,7 @@ if not st.session_state.authenticated:
         if password_input == PASSWORD:
             st.session_state.authenticated = True
             st.success("Login successful!")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Incorrect password")
     st.stop()
@@ -26,24 +26,23 @@ if not st.session_state.authenticated:
 def load_data():
     try:
         df = pd.read_csv('finance_data.csv')
-    except FileNotFoundError:  # <-- colon is necessary here!
+    except FileNotFoundError:
         df = pd.DataFrame(columns=['date', 'category', 'amount'])
+    # Convert date column to datetime, coerce errors to NaT
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
     return df
 
 df = load_data()
 
 st.title("💰 My Expense & Savings Tracker")
 
-# --- Ensure 'date' column is datetime ---
-if not df.empty:
-    df['date'] = pd.to_datetime(df['date'])
-
 # --- Calculate Totals ---
 total_savings = df[df['category'] == 'saving']['amount'].sum()
 total_expenses = df[df['category'] == 'expense']['amount'].sum()
 
 # --- Weekly Summary (current week only) ---
-start_of_week = datetime.today().date() - pd.to_timedelta(datetime.today().weekday(), unit='D')
+today = datetime.today().date()
+start_of_week = today - timedelta(days=today.weekday())  # Monday of this week
 this_week_df = df[df['date'].dt.date >= start_of_week]
 weekly_expenses = this_week_df[this_week_df['category'] == 'expense']['amount'].sum()
 
@@ -69,8 +68,11 @@ if submitted:
         'amount': amount
     }
     df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+    # Ensure 'date' column is datetime after adding new entry
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
     df.to_csv('finance_data.csv', index=False)
     st.success("Entry added!")
+    st.experimental_rerun()
 
 # --- Time-based Summary Table ---
 st.markdown("### 📅 Time-Based Summary")
@@ -78,7 +80,9 @@ freq = st.selectbox("View Summary By:", ["Daily", "Monthly", "Yearly"])
 freq_map = {"Daily": "D", "Monthly": "M", "Yearly": "Y"}
 
 if not df.empty:
-    summary = df.groupby(
+    # Drop rows with invalid/missing dates to avoid errors
+    df_clean = df.dropna(subset=['date'])
+    summary = df_clean.groupby(
         [pd.Grouper(key='date', freq=freq_map[freq]), 'category']
     )['amount'].sum().unstack().fillna(0)
     st.dataframe(summary)
