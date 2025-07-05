@@ -1,33 +1,35 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# Password for login
-PASSWORD = "mj1234#"
+PASSWORD = "mypassword123"
 
-# Initialize authentication state
+# --- Authentication ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-if not st.session_state.authenticated:
+def login():
     st.title("🔐 Login Required")
-    password = st.text_input("Enter password", type="password")
+    pwd = st.text_input("Enter password", type="password")
     if st.button("Login"):
-        if password == PASSWORD:
+        if pwd == PASSWORD:
             st.session_state.authenticated = True
             st.experimental_rerun()
         else:
             st.error("Incorrect password")
+
+if not st.session_state.authenticated:
+    login()
     st.stop()
 
+# --- Main App ---
 st.title("💰 Personal Finance Tracker")
 
-# Load or initialize DataFrame
+# Load or initialize data
 @st.cache_data(show_spinner=False)
 def load_data():
     try:
         df = pd.read_csv("finance_data.csv", parse_dates=["date"])
-        # Ensure date column is datetime
         df["date"] = pd.to_datetime(df["date"])
     except FileNotFoundError:
         df = pd.DataFrame(columns=["date", "category", "description", "amount", "type"])
@@ -35,72 +37,65 @@ def load_data():
 
 df = load_data()
 
-# Entry form
-with st.form("entry_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        date = st.date_input("Date", datetime.today())
-        category = st.selectbox("Category", ["Food", "Transport", "Entertainment", "Bills", "Savings", "Other"])
-    with col2:
-        description = st.text_input("Description")
-        amount = st.number_input("Amount", min_value=0.0, format="%.2f")
-    type_ = st.radio("Type", ["Expense", "Savings"])
+# Add new entry form
+with st.form("add_entry_form", clear_on_submit=True):
+    st.subheader("Add Expense or Saving")
+    entry_date = st.date_input("Date", datetime.today())
+    entry_type = st.selectbox("Type", ["Expense", "Saving"])
+    category = st.text_input("Category")
+    description = st.text_input("Description")
+    amount = st.number_input("Amount", min_value=0.0, format="%.2f")
+
     submitted = st.form_submit_button("Add Entry")
 
 if submitted:
-    new_entry = {
-        "date": pd.to_datetime(date),
-        "category": category,
-        "description": description,
-        "amount": amount,
-        "type": type_,
-    }
-    df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
-    df.to_csv("finance_data.csv", index=False)
-    st.success("Entry added!")
+    if category.strip() == "" or amount <= 0:
+        st.error("Please provide valid Category and Amount > 0.")
+    else:
+        new_entry = {
+            "date": pd.to_datetime(entry_date),
+            "type": entry_type,
+            "category": category.strip(),
+            "description": description.strip(),
+            "amount": amount,
+        }
+        df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+        df.to_csv("finance_data.csv", index=False)
+        st.success(f"{entry_type} added!")
+        st.experimental_rerun()
 
 # Date range selector for summary
-st.header("📊 Summary")
-start_date = st.date_input("Start date", df["date"].min() if not df.empty else datetime.today())
-end_date = st.date_input("End date", df["date"].max() if not df.empty else datetime.today())
+st.subheader("View Summary")
+min_date = df["date"].min() if not df.empty else datetime.today()
+max_date = df["date"].max() if not df.empty else datetime.today()
+start_date = st.date_input("Start date", min_value=min_date, max_value=max_date, value=min_date)
+end_date = st.date_input("End date", min_value=min_date, max_value=max_date, value=max_date)
 
 if start_date > end_date:
-    st.error("Error: Start date must be before end date.")
-else:
-    mask = (df["date"] >= pd.to_datetime(start_date)) & (df["date"] <= pd.to_datetime(end_date))
-    filtered_df = df.loc[mask]
+    st.error("Start date must be before or equal to End date.")
+    st.stop()
 
-    if filtered_df.empty:
-        st.info("No entries for the selected date range.")
-    else:
-        # Group by date and category, sum amounts separately for Expenses and Savings
-        st.subheader("Summary by Category")
-        summary_expenses = (
-            filtered_df[filtered_df["type"] == "Expense"]
-            .groupby("category")["amount"]
-            .sum()
-            .sort_values(ascending=False)
-        )
-        summary_savings = (
-            filtered_df[filtered_df["type"] == "Savings"]
-            .groupby("category")["amount"]
-            .sum()
-            .sort_values(ascending=False)
-        )
+freq_map = {
+    "Daily": "D",
+    "Weekly": "W",
+    "Monthly": "M",
+    "Yearly": "Y",
+}
+freq = st.selectbox("Summary Frequency", list(freq_map.keys()))
 
-        st.markdown("**Expenses:**")
-        st.table(summary_expenses)
+# Filter dataframe to date range
+df_filtered = df[(df["date"] >= pd.to_datetime(start_date)) & (df["date"] <= pd.to_datetime(end_date))]
 
-        st.markdown("**Savings:**")
-        st.table(summary_savings)
+# Calculate current week total expenses and total savings (based on today)
+today = pd.to_datetime(datetime.today().date())
+week_start = today - pd.Timedelta(days=today.weekday())  # Monday
+week_end = week_start + pd.Timedelta(days=6)
+week_filter = (df["date"] >= week_start) & (df["date"] <= week_end)
+week_expenses = df[(week_filter) & (df["type"] == "Expense")]["amount"].sum()
+total_savings = df[df["type"] == "Saving"]["amount"].sum()
 
-        st.subheader("Total")
-        total_expenses = summary_expenses.sum()
-        total_savings = summary_savings.sum()
-        st.write(f"Total Expenses: ${total_expenses:.2f}")
-        st.write(f"Total Savings: ${total_savings:.2f}")
+st.markdown(f"### Current Week's Total Expenses: ${week_expenses:.2f}")
+st.markdown(f"### Total Savings: ${total_savings:.2f}")
 
-        # Detailed transactions
-        st.subheader("Detailed Transactions")
-        st.dataframe(filtered_df.sort_values(by="date", ascending=False))
-
+if df_filtered.empty:
+    st.info("No data for selected date
