@@ -74,20 +74,18 @@ weekly_saving = week_df[week_df["type"] == "Saving"]["amount"].sum()
 st.markdown(f"**Total Weekly Expenses:** AED {weekly_expense:.2f}")
 st.markdown(f"**Total Weekly Savings:** AED {weekly_saving:.2f}")
 
-# Summary viewer
-# Summary viewer
+# 📊 Summary viewer
 st.subheader("📊 Summary")
 
 view_option = st.selectbox("View summary by", ["Monthly", "Custom Date Range"])
 
 if view_option == "Monthly":
-    # Create two columns: Year and Month side by side
     col1, col2 = st.columns(2)
-
+    
     years = sorted(df["date"].dt.year.unique(), reverse=True)
     with col1:
         selected_year = st.selectbox("Select Year", years)
-
+    
     months = {
         "January": 1, "February": 2, "March": 3, "April": 4,
         "May": 5, "June": 6, "July": 7, "August": 8,
@@ -97,14 +95,12 @@ if view_option == "Monthly":
         selected_month_name = st.selectbox("Select Month", list(months.keys()))
         selected_month = months[selected_month_name]
 
-    # Filter the data for selected year and month
     filtered_df = df[
         (df["date"].dt.year == selected_year) &
         (df["date"].dt.month == selected_month)
     ]
 
 else:
-    # Create two columns: Start Date and End Date side by side
     col1, col2 = st.columns(2)
     with col1:
         start_date = st.date_input("Start Date", datetime.today() - timedelta(days=30))
@@ -124,17 +120,41 @@ else:
 if filtered_df.empty:
     st.info("No records found in the selected period.")
 else:
-    # Totals
+    # --- Summary Totals ---
     total_expense = filtered_df[filtered_df["type"] == "Expense"]["amount"].sum()
     total_saving = filtered_df[filtered_df["type"] == "Saving"]["amount"].sum()
 
-    st.markdown(f"**Total Expenses:** AED {total_expense:.2f}")
-    st.markdown(f"**Total Savings:** AED {total_saving:.2f}")
+    st.markdown(f"**💸 Total Expenses:** AED {total_expense:.2f}")
+    st.markdown(f"**💰 Total Savings:** AED {total_saving:.2f}")
 
-    # Grouped summary
-    grouped = filtered_df.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
-    st.dataframe(grouped)
+    # --- All Transactions in Selected Period ---
+    st.markdown("### 📋 Transactions in Selected Period")
+    st.dataframe(
+        filtered_df.sort_values("date", ascending=False).reset_index(drop=True)
+    )
+# Export Option
+import io
 
+# --- Export buttons ---
+file_buffer = io.BytesIO()
+filtered_df.to_excel(file_buffer, index=False, engine="openpyxl")
+file_buffer.seek(0)
+
+st.download_button(
+    label="📥 Download as Excel",
+    data=file_buffer,
+    file_name="transactions_summary.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+csv_data = filtered_df.to_csv(index=False).encode("utf-8")
+st.download_button(
+    label="📥 Download as CSV",
+    data=csv_data,
+    file_name="transactions_summary.csv",
+    mime="text/csv"
+)
+# All Transactions
 st.subheader("📋 All Transactions")
 if df.empty:
     st.info("No transactions found.")
