@@ -34,16 +34,12 @@ except FileNotFoundError:
     df = pd.DataFrame(columns=["date", "category", "type", "amount", "notes"])
 
 # Entry form
-st.subheader("➕ Add New Transaction")
-
 with st.form("entry_form"):
-    # Automatically capture the current timestamp when submitted
-timestamp = datetime.now())
-
+    st.markdown("### Add New Transaction")
     category = st.text_input("Category")
     trans_type = st.selectbox("Type", ["Expense", "Saving"])
     amount = st.number_input("Amount", min_value=0.0, step=0.01)
-    notes = st.text_area("Notes", height=80)  # <- fixed height here
+    notes = st.text_area("Notes", height=80)
     submitted = st.form_submit_button("Add Entry")
 
     if submitted:
@@ -52,8 +48,9 @@ timestamp = datetime.now())
         elif not category.strip():
             st.error("Category cannot be empty.")
         else:
+            timestamp = datetime.now()  # full date + time
             new_entry = {
-                "date": pd.to_datetime(date),
+                "date": timestamp,
                 "category": category.strip(),
                 "type": trans_type,
                 "amount": amount,
@@ -61,7 +58,8 @@ timestamp = datetime.now())
             }
             df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
             df.to_csv(DATA_FILE, index=False)
-            st.success("Transaction added successfully!")
+            st.success(f"Transaction added on {timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+
 
 # Current week summary
 st.subheader("📆 Current Week Summary")
