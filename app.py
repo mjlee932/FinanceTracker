@@ -75,43 +75,57 @@ st.markdown(f"**Total Weekly Expenses:** AED {weekly_expense:.2f}")
 st.markdown(f"**Total Weekly Savings:** AED {weekly_saving:.2f}")
 
 # Summary viewer
+
 # Summary viewer
-st.subheader("📊 Summary by Period")
+st.subheader("📊 Summary")
 
-freq_options = {
-    "Daily": "D",
-    "Weekly": "W-MON",
-    "Monthly": "M",
-    "Yearly": "Y"
-}
+view_option = st.selectbox("View summary by", ["Monthly", "Custom Date Range"])
 
-summary_type = st.selectbox("Select summary type", list(freq_options.keys()) + ["Custom Date Range"])
+if view_option == "Monthly":
+    years = sorted(df["date"].dt.year.unique(), reverse=True)
+    selected_year = st.selectbox("Select Year", years)
 
-# Let user choose date range for all summary types
-start_date = st.date_input("Start date", datetime.today() - timedelta(days=30))
-end_date = st.date_input("End date", datetime.today())
+    months = {
+        "January": 1, "February": 2, "March": 3, "April": 4,
+        "May": 5, "June": 6, "July": 7, "August": 8,
+        "September": 9, "October": 10, "November": 11, "December": 12
+    }
+    selected_month_name = st.selectbox("Select Month", list(months.keys()))
+    selected_month = months[selected_month_name]
 
-# Make sure dates are valid
-if pd.to_datetime(start_date) > pd.to_datetime(end_date):
-    st.error("Start date must be before end date.")
+    # Filter the data for selected year and month
+    filtered_df = df[
+        (df["date"].dt.year == selected_year) &
+        (df["date"].dt.month == selected_month)
+    ]
+
 else:
-    filtered_df = df[(df["date"] >= pd.to_datetime(start_date)) & (df["date"] <= pd.to_datetime(end_date))]
-
-    if filtered_df.empty:
-        st.info("No records in selected range.")
-    elif summary_type == "Custom Date Range":
-        grouped = filtered_df.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
-        st.dataframe(grouped)
+    start_date = st.date_input("Start Date", datetime.today() - timedelta(days=30))
+    end_date = st.date_input("End Date", datetime.today())
+    if start_date > end_date:
+        st.error("Start date must be before end date.")
+        filtered_df = pd.DataFrame()
     else:
-        df["date"] = pd.to_datetime(df["date"])  # ensure it's datetime
-        grouped = filtered_df.groupby([
-            pd.Grouper(key="date", freq=freq_options[summary_type]),
-            "type",
-            "category"
-        ])["amount"].sum()
+        filtered_df = df[
+            (df["date"] >= pd.to_datetime(start_date)) &
+            (df["date"] <= pd.to_datetime(end_date))
+        ]
 
-        summary_df = grouped.unstack(level=[1, 2]).fillna(0)
-        st.dataframe(summary_df)
+# Display summary if data exists
+if filtered_df.empty:
+    st.info("No records found in the selected period.")
+else:
+    # Totals
+    total_expense = filtered_df[filtered_df["type"] == "Expense"]["amount"].sum()
+    total_saving = filtered_df[filtered_df["type"] == "Saving"]["amount"].sum()
+
+    st.markdown(f"**Total Expenses:** AED {total_expense:.2f}")
+    st.markdown(f"**Total Savings:** AED {total_saving:.2f}")
+
+    # Grouped summary
+    grouped = filtered_df.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
+    st.dataframe(grouped)
+
 
 st.subheader("📋 All Transactions")
 if df.empty:
