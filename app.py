@@ -75,23 +75,27 @@ st.markdown(f"**Total Weekly Expenses:** AED {weekly_expense:.2f}")
 st.markdown(f"**Total Weekly Savings:** AED {weekly_saving:.2f}")
 
 # Summary viewer
-
 # Summary viewer
 st.subheader("📊 Summary")
 
 view_option = st.selectbox("View summary by", ["Monthly", "Custom Date Range"])
 
 if view_option == "Monthly":
+    # Create two columns: Year and Month side by side
+    col1, col2 = st.columns(2)
+
     years = sorted(df["date"].dt.year.unique(), reverse=True)
-    selected_year = st.selectbox("Select Year", years)
+    with col1:
+        selected_year = st.selectbox("Select Year", years)
 
     months = {
         "January": 1, "February": 2, "March": 3, "April": 4,
         "May": 5, "June": 6, "July": 7, "August": 8,
         "September": 9, "October": 10, "November": 11, "December": 12
     }
-    selected_month_name = st.selectbox("Select Month", list(months.keys()))
-    selected_month = months[selected_month_name]
+    with col2:
+        selected_month_name = st.selectbox("Select Month", list(months.keys()))
+        selected_month = months[selected_month_name]
 
     # Filter the data for selected year and month
     filtered_df = df[
@@ -100,8 +104,13 @@ if view_option == "Monthly":
     ]
 
 else:
-    start_date = st.date_input("Start Date", datetime.today() - timedelta(days=30))
-    end_date = st.date_input("End Date", datetime.today())
+    # Create two columns: Start Date and End Date side by side
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Start Date", datetime.today() - timedelta(days=30))
+    with col2:
+        end_date = st.date_input("End Date", datetime.today())
+
     if start_date > end_date:
         st.error("Start date must be before end date.")
         filtered_df = pd.DataFrame()
@@ -125,7 +134,6 @@ else:
     # Grouped summary
     grouped = filtered_df.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
     st.dataframe(grouped)
-
 
 st.subheader("📋 All Transactions")
 if df.empty:
