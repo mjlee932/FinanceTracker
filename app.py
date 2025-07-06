@@ -38,7 +38,7 @@ st.subheader("➕ Add New Transaction")
 
 with st.form("entry_form"):
     # Automatically capture the current timestamp when submitted
-timestamp = datetime.now()
+timestamp = datetime.now())
 
     category = st.text_input("Category")
     trans_type = st.selectbox("Type", ["Expense", "Saving"])
