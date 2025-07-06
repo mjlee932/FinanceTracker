@@ -1,29 +1,24 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
 
 PASSWORD = "mypassword123"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-def login_page():
-    st.title("Login")
-    pwd = st.text_input("Enter password:", type="password")
-    login_clicked = st.button("Login")
-    return pwd, login_clicked
-
-# --- LOGIN FLOW ---
-
 if not st.session_state.authenticated:
-    pwd, login_clicked = login_page()
-    if login_clicked:
+    st.title("Login")
+    pwd = st.text_input("Password", type="password")
+    if st.button("Login"):
         if pwd == PASSWORD:
             st.session_state.authenticated = True
-            st.experimental_rerun()  # Rerun once after successful login
+            st.experimental_rerun()  # ONLY call this here, after setting authenticated
         else:
             st.error("Incorrect password")
-    st.stop()  # Stop here until authenticated
+    st.stop()
+
+# Main app content below (runs only if authenticated)
+st.write("Welcome to your finance tracker!")
+
 
 # --- MAIN APP BELOW ---
 
