@@ -36,7 +36,7 @@ except FileNotFoundError:
 # Entry form
 with st.form("entry_form"):
     st.markdown("### Add New Transaction")
-    category = st.text_input("Category")
+
     trans_type = st.selectbox("Type", ["Expense", "Saving"])
     amount = st.number_input("Amount", min_value=0.0, step=0.01)
     notes = st.text_area("Notes", height=80)
