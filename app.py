@@ -33,6 +33,7 @@ def export_to_gsheet(df, spreadsheet_name="Finance Transactions", worksheet_name
         worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows="1000", cols="20")
 
     data = [df.columns.values.tolist()] + df.values.tolist()
-    worksheet.update(data)
- st.success(f"Exported {len(df)} rows to Google Sheet: {spreadsheet_name} / {worksheet_name}")
+worksheet.update(data)
+st.success(f"Exported {len(df)} rows to Google Sheet: {spreadsheet_name} / {worksheet_name}")
+
 
