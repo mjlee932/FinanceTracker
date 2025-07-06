@@ -1,8 +1,32 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
+import io
+
+import gspread
+from google.oauth2.service_account import Credentials
 
 PASSWORD = "mypassword123"
+
+# Google Sheets helper functions
+def get_gsheet_client():
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(
+        creds_dict,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+    client = gspread.authorize(creds)
+    return client
+
+def export_to_gsheet(df, sheet_name="Finance Transactions"):
+    client = get_gsheet_client()
+    try:
+        sheet = client.open(sheet_name).sheet1
+    except gspread.SpreadsheetNotFound:
+        sheet = client.create(sheet_name).sheet1
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    st.success(f"Data exported to Google Sheet: {sheet_name}")
 
 # --- Session state setup ---
 if "authenticated" not in st.session_state:
@@ -38,6 +62,7 @@ with st.form("entry_form"):
     st.markdown("### Add New Transaction")
 
     trans_type = st.selectbox("Type", ["Expense", "Saving"])
+    category = st.text_input("Category")
     amount = st.number_input("Amount", min_value=0.0, step=0.01)
     notes = st.text_area("Notes", height=80)
     submitted = st.form_submit_button("Add Entry")
@@ -59,7 +84,6 @@ with st.form("entry_form"):
             df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
             df.to_csv(DATA_FILE, index=False)
             st.success(f"Transaction added on {timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
-
 
 # Current week summary
 st.subheader("📆 Current Week Summary")
@@ -132,10 +156,8 @@ else:
     st.dataframe(
         filtered_df.sort_values("date", ascending=False).reset_index(drop=True)
     )
-# Export Option
-import io
 
-# --- Export buttons ---
+# Export buttons
 file_buffer = io.BytesIO()
 filtered_df.to_excel(file_buffer, index=False, engine="openpyxl")
 file_buffer.seek(0)
@@ -154,6 +176,14 @@ st.download_button(
     file_name="transactions_summary.csv",
     mime="text/csv"
 )
+
+# Google Sheets export button
+if st.button("📤 Export to Google Sheets"):
+    if filtered_df.empty:
+        st.warning("No data to export.")
+    else:
+        export_to_gsheet(filtered_df)
+
 # All Transactions
 st.subheader("📋 All Transactions")
 if df.empty:
