@@ -131,4 +131,23 @@ file_buffer.seek(0)
 
 st.download_button(
     label="📥 Download as Excel",
-    data=
+    data=file_buffer,
+    file_name="transactions_summary.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+csv_data = filtered_df.to_csv(index=False).encode("utf-8")
+st.download_button(
+    label="📥 Download as CSV",
+    data=csv_data,
+    file_name="transactions_summary.csv",
+    mime="text/csv"
+)
+# All Transactions
+st.subheader("📋 All Transactions")
+if df.empty:
+    st.info("No transactions found.")
+else:
+    st.dataframe(df.sort_values("date", ascending=False).reset_index(drop=True))
+
+
