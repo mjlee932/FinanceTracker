@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
+import io
 
 PASSWORD = "mypassword123"
 
@@ -31,7 +32,7 @@ DATA_FILE = "transactions.csv"
 try:
     df = pd.read_csv(DATA_FILE, parse_dates=["date"])
 except FileNotFoundError:
-    df = pd.DataFrame(columns=["date", "category", "type", "amount", "notes"])
+    df = pd.DataFrame(columns=["date", "type", "amount", "notes"])
 
 # Entry form
 with st.form("entry_form"):
@@ -45,13 +46,10 @@ with st.form("entry_form"):
     if submitted:
         if amount <= 0:
             st.error("Amount must be greater than 0.")
-        elif not category.strip():
-            st.error("Category cannot be empty.")
         else:
-            timestamp = datetime.now()  # full date + time
+            timestamp = datetime.now()
             new_entry = {
                 "date": timestamp,
-                "category": category.strip(),
                 "type": trans_type,
                 "amount": amount,
                 "notes": notes.strip()
@@ -59,7 +57,6 @@ with st.form("entry_form"):
             df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
             df.to_csv(DATA_FILE, index=False)
             st.success(f"Transaction added on {timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
-
 
 # Current week summary
 st.subheader("📆 Current Week Summary")
@@ -81,11 +78,9 @@ view_option = st.selectbox("View summary by", ["Monthly", "Custom Date Range"])
 
 if view_option == "Monthly":
     col1, col2 = st.columns(2)
-    
     years = sorted(df["date"].dt.year.unique(), reverse=True)
     with col1:
         selected_year = st.selectbox("Select Year", years)
-    
     months = {
         "January": 1, "February": 2, "March": 3, "April": 4,
         "May": 5, "June": 6, "July": 7, "August": 8,
@@ -120,20 +115,14 @@ else:
 if filtered_df.empty:
     st.info("No records found in the selected period.")
 else:
-    # --- Summary Totals ---
     total_expense = filtered_df[filtered_df["type"] == "Expense"]["amount"].sum()
     total_saving = filtered_df[filtered_df["type"] == "Saving"]["amount"].sum()
 
     st.markdown(f"**💸 Total Expenses:** AED {total_expense:.2f}")
     st.markdown(f"**💰 Total Savings:** AED {total_saving:.2f}")
 
-    # --- All Transactions in Selected Period ---
     st.markdown("### 📋 Transactions in Selected Period")
-    st.dataframe(
-        filtered_df.sort_values("date", ascending=False).reset_index(drop=True)
-    )
-# Export Option
-import io
+    st.dataframe(filtered_df.sort_values("date", ascending=False).reset_index(drop=True))
 
 # --- Export buttons ---
 file_buffer = io.BytesIO()
@@ -142,21 +131,4 @@ file_buffer.seek(0)
 
 st.download_button(
     label="📥 Download as Excel",
-    data=file_buffer,
-    file_name="transactions_summary.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
-
-csv_data = filtered_df.to_csv(index=False).encode("utf-8")
-st.download_button(
-    label="📥 Download as CSV",
-    data=csv_data,
-    file_name="transactions_summary.csv",
-    mime="text/csv"
-)
-# All Transactions
-st.subheader("📋 All Transactions")
-if df.empty:
-    st.info("No transactions found.")
-else:
-    st.dataframe(df.sort_values("date", ascending=False).reset_index(drop=True))
+    data=
