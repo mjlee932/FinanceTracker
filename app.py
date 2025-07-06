@@ -75,6 +75,7 @@ st.markdown(f"**Total Weekly Expenses:** AED {weekly_expense:.2f}")
 st.markdown(f"**Total Weekly Savings:** AED {weekly_saving:.2f}")
 
 # Summary viewer
+# Summary viewer
 st.subheader("📊 Summary by Period")
 
 freq_options = {
@@ -86,20 +87,31 @@ freq_options = {
 
 summary_type = st.selectbox("Select summary type", list(freq_options.keys()) + ["Custom Date Range"])
 
-if summary_type == "Custom Date Range":
-    start_date = st.date_input("Start date", datetime.today() - timedelta(days=30))
-    end_date = st.date_input("End date", datetime.today())
-    custom_df = df[(df["date"] >= pd.to_datetime(start_date)) & (df["date"] <= pd.to_datetime(end_date))]
-    if custom_df.empty:
-        st.info("No records in selected range.")
-    else:
-        grouped = custom_df.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
-        st.dataframe(grouped)
+# Let user choose date range for all summary types
+start_date = st.date_input("Start date", datetime.today() - timedelta(days=30))
+end_date = st.date_input("End date", datetime.today())
+
+# Make sure dates are valid
+if pd.to_datetime(start_date) > pd.to_datetime(end_date):
+    st.error("Start date must be before end date.")
 else:
-    df["date"] = pd.to_datetime(df["date"])
-    grouped = df.groupby([pd.Grouper(key="date", freq=freq_options[summary_type]), "type", "category"])["amount"].sum()
-    summary_df = grouped.unstack(level=[1, 2]).fillna(0)
-    st.dataframe(summary_df)
+    filtered_df = df[(df["date"] >= pd.to_datetime(start_date)) & (df["date"] <= pd.to_datetime(end_date))]
+
+    if filtered_df.empty:
+        st.info("No records in selected range.")
+    elif summary_type == "Custom Date Range":
+        grouped = filtered_df.groupby(["type", "category"])["amount"].sum().unstack(fill_value=0)
+        st.dataframe(grouped)
+    else:
+        df["date"] = pd.to_datetime(df["date"])  # ensure it's datetime
+        grouped = filtered_df.groupby([
+            pd.Grouper(key="date", freq=freq_options[summary_type]),
+            "type",
+            "category"
+        ])["amount"].sum()
+
+        summary_df = grouped.unstack(level=[1, 2]).fillna(0)
+        st.dataframe(summary_df)
 
 # Transaction history
 st.subheader("📋 All Transactions")
