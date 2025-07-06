@@ -34,24 +34,32 @@ except FileNotFoundError:
     df = pd.DataFrame(columns=["date", "category", "type", "amount", "notes"])
 
 # Entry form
-submitted = st.form_submit_button("Add Entry")
+st.subheader("➕ Add New Transaction")
 
-if submitted:
-    if amount <= 0:
-        st.error("Amount must be greater than 0.")
-    elif not category.strip():
-        st.error("Category cannot be empty.")
-    else:
-        new_entry = {
-            "date": pd.to_datetime(date),
-            "category": category.strip(),
-            "type": trans_type,
-            "amount": amount,
-            "notes": notes.strip()
-        }
-        df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
-        df.to_csv(DATA_FILE, index=False)
-        st.success("Transaction added successfully!")
+with st.form("entry_form"):
+    date = st.date_input("Date", value=datetime.today())
+    category = st.text_input("Category")
+    trans_type = st.selectbox("Type", ["Expense", "Saving"])
+    amount = st.number_input("Amount", min_value=0.0, step=0.01)
+    notes = st.text_area("Notes", height=50)
+    submitted = st.form_submit_button("Add Entry")
+
+    if submitted:
+        if amount <= 0:
+            st.error("Amount must be greater than 0.")
+        elif not category.strip():
+            st.error("Category cannot be empty.")
+        else:
+            new_entry = {
+                "date": pd.to_datetime(date),
+                "category": category.strip(),
+                "type": trans_type,
+                "amount": amount,
+                "notes": notes.strip()
+            }
+            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+            df.to_csv(DATA_FILE, index=False)
+            st.success("Transaction added successfully!")
 
 # Current week summary
 st.subheader("📆 Current Week Summary")
