@@ -37,7 +37,9 @@ except FileNotFoundError:
 st.subheader("➕ Add New Transaction")
 
 with st.form("entry_form"):
-    date = st.date_input("Date", value=datetime.today())
+    # Automatically capture the current timestamp when submitted
+timestamp = datetime.now()
+
     category = st.text_input("Category")
     trans_type = st.selectbox("Type", ["Expense", "Saving"])
     amount = st.number_input("Amount", min_value=0.0, step=0.01)
