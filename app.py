@@ -34,19 +34,14 @@ except FileNotFoundError:
     df = pd.DataFrame(columns=["date", "category", "type", "amount", "notes"])
 
 # Entry form
-st.subheader("Add New Transaction")
-with st.form("entry_form"):
-    col1, col2 = st.columns(2)
-    with col1:
-        date = st.date_input("Date", datetime.today())
-        category = st.text_input("Category")
-    with col2:
-        trans_type = st.selectbox("Type", ["Expense", "Saving"])
-        amount = st.number_input("Amount", min_value=0.0, format="%.2f")
-        notes = st.text_input("Notes (optional)")
-    submitted = st.form_submit_button("Add Entry")
+submitted = st.form_submit_button("Add Entry")
 
-    if submitted:
+if submitted:
+    if amount <= 0:
+        st.error("Amount must be greater than 0.")
+    elif not category.strip():
+        st.error("Category cannot be empty.")
+    else:
         new_entry = {
             "date": pd.to_datetime(date),
             "category": category.strip(),
