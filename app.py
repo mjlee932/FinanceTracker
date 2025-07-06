@@ -113,7 +113,6 @@ else:
         summary_df = grouped.unstack(level=[1, 2]).fillna(0)
         st.dataframe(summary_df)
 
-# Transaction history
 st.subheader("📋 All Transactions")
 if df.empty:
     st.info("No transactions found.")
